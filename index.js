@@ -32,7 +32,8 @@ function address(scope, asset, position){
 function define(config){
     var scope = {};
     scope.api = Api(config.api);
-    scope.wallet = Wallet(config.wallet.passphrase);
+    scope.account = Wallet.createAccount(config.wallet.passphrase);
+    scope.wallet = Wallet.start(config.wallet.passphrase);
     scope.api.pairs()
         .then(function(pairs){
             console.log(pairs);
