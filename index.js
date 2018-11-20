@@ -1,11 +1,18 @@
 var Api = require("@kokosapiens/api");
 var Wallet = require("@kokosapiens/wallet");
 var _ = require("lodash");
+var BigNumber = require("bignumber.js");
+
+var assetsDecs = {eth: 1e18,
+                  lsk: 1e8,
+                  doge: 1e8,
+                  btc: 1e8};
+
 
 function convert(scope, fromAsset, fromAssetVolume,
                  toAsset, toAssetVolume){
     return new Promise(function(resolve, reject){
-        console.log(scope);
+      
     });
 
 }
@@ -17,9 +24,17 @@ function balance(scope, asset, position){
            || position == null){
             position = 0;
         }
-        scope.wallet.positionBalance(asset, position).then(resolve).catch(reject);
+        scope.wallet.positionBalance(asset, position)
+            .then(function(w){
+                resolve({address: w.address.address,
+                         balance: (new BigNumber(w.total)).dividedBy(assetsDecs[w.address.symbol]).toFixed(8),
+                         symbol: w.address.symbol,
+                         network: w.address.network,
+                         position: w.address.position});
+            }).catch(reject);
     });
 }
+
 
 function address(scope, asset, position){
     return new Promise(function(resolve, reject){
@@ -27,7 +42,21 @@ function address(scope, asset, position){
            || position == null){
             position = 0;
         }
-        scope.wallet.positionBalance(asset, position).then(resolve).catch(reject);
+        balance(scope, asset, position).then(resolve).catch(reject);
+    });
+}
+
+function transfer(scope, asset, amount, toAddress, position){
+    return new Promise(function(resolve, reject){
+        if(typeof(position) == "undefined"
+           || position == null){
+            position = 0;
+        }
+        balance(scope, asset, position)
+            .then(function(b){
+                
+            }).catch(reject);
+
     });
 }
 
