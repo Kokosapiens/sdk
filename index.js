@@ -1,10 +1,12 @@
 var Api = require("@kokosapiens/api");
 var Wallet = require("@kokosapiens/wallet");
 var _ = require("lodash");
-var cache = {};
+
 function convert(scope, fromAsset, fromAssetVolume,
                  toAsset, toAssetVolume){
-
+    return new Promise(function(resolve, reject){
+        console.log(scope);
+    });
 
 }
 
@@ -30,19 +32,21 @@ function address(scope, asset, position){
 }
 
 function define(config){
-    var scope = {};
-    scope.api = Api(config.api);
-    scope.account = Wallet.createAccount(config.wallet.passphrase);
-    scope.wallet = Wallet.start(config.wallet.passphrase);
-    scope.api.pairs()
-        .then(function(pairs){
-            console.log(pairs);
-            cache.pairs = pairs;
-        }).catch(function(){
-
-        });
-    return {convert: _.partial(convert, scope),
-            balance: _.partial(balance, scope)};
+    return new Promise(function(resolve, reject){
+        var scope = {};
+        scope.cache = {};
+        scope.api = Api(config.api);
+        scope.account = Wallet.createAccount(config.wallet.passphrase, 0, 0);
+     
+        scope.network = config.wallet.network;
+        scope.wallet = Wallet.start(scope.account, config.wallet.network);
+        scope.api.pairs()
+            .then(function(pairs){
+                scope.cache.pairs = pairs;
+                resolve({convert: _.partial(convert, scope),
+                         balance: _.partial(balance, scope)});
+            }).catch(reject);
+    });
 }
 
 module.exports = define;
