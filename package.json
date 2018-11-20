@@ -1,6 +1,6 @@
 {
   "name": "@kokosapiens/sdk",
-  "version": "0.1.5",
+  "version": "0.2.0",
   "description": "kokos api with wallet support",
   "main": "index.js",
   "scripts": {
@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/kokosapiens/sdk#readme",
   "dependencies": {
-    "@kokosapiens/api": "latest",
-    "@kokosapiens/wallet": "latest",
+    "@kokosapiens/api": "^0.1.1",
+    "@kokosapiens/wallet": "^0.2.4",
     "bignumber.js": "^8.0.1",
     "lodash": "^4.17.11"
   }
