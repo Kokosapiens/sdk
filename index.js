@@ -33,7 +33,6 @@ function balance(scope, asset, position){
     });
 }
 
-
 function address(scope, asset, position){
     return new Promise(function(resolve, reject){
         if(typeof(position) == "undefined"
@@ -53,7 +52,6 @@ function transfer(scope, asset, amount, toAddress, position){
         balance(scope, asset, position)
             .then(function(b){
                 var bn = new BigNumber(b.balance);
-                console.log("transferamount: ", amount, b.balance);
                 if(!bn.isGreaterThan(amount)){
                     return reject({error: "Not Enough Balance"});
                 }
@@ -68,15 +66,12 @@ function transfer(scope, asset, amount, toAddress, position){
                                  to: toAddress});
                     }).catch(reject);
             }).catch(reject);
-
     });
 }
 
 function nothing(order){
     return order;
 }
-
-
 
 function rejectScope(scope, initiatedOrder, options, startedAt, prev){
     startOrderWatch(scope, initiatedOrder, options, startedAt, prev);
@@ -86,7 +81,7 @@ function orderWatch(scope, initiatedOrder, options, startedAt, prev){
     var now = new Date();
     scope.api.order.info({uuid: initiatedOrder.uuid})
         .then(function(order){
-            console.log(order);
+            
             var is = {opened: parseInt(order.opened) > 0,
                       closed: parseInt(order.closed) > 0,
                       expired: parseInt(order.expired) > 0};
@@ -118,6 +113,8 @@ function startOrderWatch(scope, initiatedOrder, options, startedAt, prev){
 }
 
 /*
+  @function placeOrder
+  @arguments scope, requestedOrderInfo, options 
   options [optional]: {onInitiate, orderWatch, onOpen, onClose, onExpiry, autoCancelAfterOpenInMinutes}
   onInitiate: will be called on order successfully initiated
   onPaid: will be called after payment is sent
@@ -144,7 +141,6 @@ function placeOrder(scope, requestedOrder, options){
                               autoCancelAferOpenInMinutes: 0};
         
         options = Object.assign(defaultOptions, options)
-        
         var pair = scope.cache.pairs[requestedOrder.pair];
         var side = requestedOrder.side;
         var fromAsset = side == "bid" ? pair.quote_asset : pair.base_asset;
@@ -153,13 +149,11 @@ function placeOrder(scope, requestedOrder, options){
         var receiveAt = scope.cache.addresses[toAsset].address;
         var transformation = scope.cache.conversionMap[fromAsset][toAsset];
         var volume = (new BigNumber(requestedOrder.volume)).toFixed(8);
-        
         var orderInfo = {volume: volume,
                          pair: transformation.pair,
                          side: transformation.side,
                          refund_address: refundAt,
                          receive_address: receiveAt};
-        
         if(typeof(requestedOrder.price) != "undefined"
            && requestedOrder.price != null
            && typeof(scope.config.api.token) != "undefined"
@@ -177,7 +171,7 @@ function placeOrder(scope, requestedOrder, options){
                 if(options.orderWatch){
                     startOrderWatch(scope, initiatedOrder, options, new Date());
                 }
-                console.log(initiatedOrder);
+            
                 transfer(scope, initiatedOrder.deposit.asset,
                          initiatedOrder.deposit.deposit_amount_required,
                          initiatedOrder.deposit.address)
@@ -190,8 +184,44 @@ function placeOrder(scope, requestedOrder, options){
                 resolve(initiatedOrder);
             })
             .catch(reject);
-        
     });
+}
+/*
+@function bidOrder
+  scope, order, options
+ 
+*/
+function bidOrder(scope, oInfo, options){
+    var requestedOrder = {};
+    requestedOrder.side = "bid";
+    requestedOrder.pair = oInfo.pair;
+    requestedOrder.volume = (new BigNumber(oInfo.volume)).toFixed(8);
+    if(typeof(options) == "undefined"){
+        options = {};
+    }
+    if( typeof(oInfo.price) != "undefined"){
+        requestedOrder.price = (new BigNumber(oInfo.price)).toFixed();
+    }
+    return placeOrder(scope, requestedOrder, options);
+}
+/*
+@function sellOrder
+  multi arity
+  scope, pair, volume, options
+  scope, pair, volume, price, options
+*/
+function askOrder(scope, oInfo, options){
+    var requestedOrder = {};
+    requestedOrder.side = "ask";
+    requestedOrder.pair = oInfo.pair;
+    requestedOrder.volume = (new BigNumber(oInfo.volume)).toFixed(8);
+    if(typeof(options) == "undefined"){
+        options = {};
+    }
+    if( typeof(oInfo.price) != "undefined"){
+        requestedOrder.price = (new BigNumber(oInfo.price)).toFixed(8);
+    }
+    return placeOrder(scope, requestedOrder, options);
 }
 
 function define(config){
@@ -204,8 +234,12 @@ function define(config){
         scope.cache = {};
         scope.api = Api(config.api);
         scope.config = config;
-        scope.account = Wallet.createAccount(config.wallet.passphrase, 0, 0);
-        
+        if(typeof(config.wallet) != "undefined"
+           && typeof(config.wallet.passphrase) != "undefined"){
+            scope.account = Wallet.createAccount(config.wallet.passphrase, 0, 0);
+        }else{
+            scope.account = Wallet.createAccount(null, 0, 0);
+        }
         scope.network = config.wallet.network;
         scope.wallet = Wallet.start(scope.account,
                                     config.wallet.network);
@@ -225,13 +259,10 @@ function define(config){
                         scope.cache.conversionMap[pair.quote_asset] = {};
                         addressesP.push(balance(scope, pair.quote_asset, config.wallet.position));
                     }
-
                     scope.cache.conversionMap[pair.base_asset][pair.quote_asset] = {side: "ask",
                                                                                     pair: pairSymbol};
                     scope.cache.conversionMap[pair.quote_asset][pair.base_asset] = {side: "bid",
                                                                                     pair: pairSymbol};
-                    
-                    
                 }
                 scope.cache.pairs = pairs;
                 Promise.all(addressesP).then(function(addressesArr){
@@ -239,13 +270,14 @@ function define(config){
                         r[a.asset] = a;
                         return r;
                     },{});
-                    console.log(addresses);
                     scope.cache.addresses = addresses;
                     resolve({order: _.partial(placeOrder, scope),
                              balance: _.partial(balance, scope),
-                             transfer: _.partial(transfer, scope)});
+                             transfer: _.partial(transfer, scope),
+                             buy: _.partial(bidOrder, scope),
+                             sell: _.partial(askOrder, scope),
+                             scope: scope});
                 }).catch(reject);
-              
             }).catch(reject);
     });
 }
