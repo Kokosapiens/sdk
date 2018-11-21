@@ -2,6 +2,19 @@
 
 `npm install --save @kokosapiens/sdk`
 
+### What is a @kokosapiens/wallet [https://github.com/kokosapiens/wallet]?
+
+is a HD multicurrency wallet library.
+Supported currencies: BTC, ETH, LSK, DOGE
+All transactions are signed offline. Your private keys never touch the internet.
+
+#### Wallet addresses
+
+Position 0 is called BASE and is used as default accross the SDK
+Position is a positive integer.
+
+## How to use
+
 ```javascript
 var Sdk = require("@kokosapiens/sdk");
 
@@ -11,14 +24,12 @@ var config = {api: {email: "your@email",
               wallet: {passphrase: "your hd multicurrency wallet passphrase",
                        network: "mainnet"}};
 
-
-
-
-
 function start(sdk){
 
         var orderHandlers = {orderWatch: true,
                              autoCancelAfterOpenInMinutes: 60,
+                             payFromPosition: 0, // will send from base address
+                             receiveAtPosition: 0, // will receive at base address
                              onPaid: function(order, payment){
                                      console.log("paid");
                                      console.log(arguments);
@@ -90,11 +101,11 @@ Sdk({wallet: {},
 
 ```
 
-To get the account addresses and balances for specific asset
+To get the account addresses and balance for specific asset address at specific position
 
-`sdk.balance("btc").then(doWithAddress).catch(errorHandler)`
+`sdk.balance("btc",295).then(doWithBTCAddressAtPosition295).catch(errorHandler)`
 
-Get balances for all supported currencies
+Get balances at position 0 for all supported currencies
 
 ```javascript
 var assets = ["btc", "eth", "lsk", "doge"];
@@ -109,10 +120,19 @@ Promise.all(bps)
 }).catch(errorHandler);
 ```
 
+To get the balance of "eth" address at position N (e.g. 5) in your hd wallet
+
+`sdk.balance("eth",5)` will return a promise that will resolve with information of the eth address at position 5
+
 To transfer funds
 
 `sdk.transfer("lsk", 1.0, "ALISKADDRESS")` will send 1.0 LSK to the given address. Blockchain tx fees are paid over amonut (the balance of the account must be at least 1.1 in this case where 0.1 LSK is the standard blockchain tx fee on Lisk network).
 
+or to transfer funds from one position of hd wallet to another position
+`sdk.internalTransfer(1000, "doge", 0, 12)` will send 1000 DOGE from position 0 (base wallet address) to address at position 12.
+
+to transfer all funds between two internal addresses
+`sdk.internalTransfer(null, "eth", 2, 0)` will empty position 2 address to base position address.
 
 #### contact support@kokos.one for a Kokos API token / secret
 
