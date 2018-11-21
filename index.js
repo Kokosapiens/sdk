@@ -147,7 +147,11 @@ function orderWatch(scope, initiatedOrder, options, startedAt, prev){
                                 
                             });
                         return;
+                    }else{
+                        options.onCheck(order, initiatedOrder);
                     }
+                }else{
+                    options.onCheck(order, initiatedOrder);
                 }
                 startOrderWatch(scope, order, options, startedAt, initiatedOrder);
             }
@@ -168,6 +172,7 @@ function startOrderWatch(scope, initiatedOrder, options, startedAt, prev){
   onInitiate: will be called on order successfully initiated
   onPaid: will be called after payment is sent
   orderWatch: when set to false only onInitiate and no other handler will be fired.
+  onCheck: will be called every time the order status is checked
   onOpen: will be called when order is marked as open (deposit for order was completely received)
   onClose: will be called when order is fully executed
   onCancel: will be called when order is cancelled
@@ -184,6 +189,7 @@ function placeOrder(scope, requestedOrder, options){
             onInitiate: nothing,
             onPaid: nothing,
             orderWatch: false,
+            onCheck: nothing,
             onOpen: nothing,
             onCancel: nothing,
             onClose: nothing,
