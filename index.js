@@ -120,11 +120,11 @@ function nothing(order){
     return order;
 }
 
-function rejectScope(scope, initiatedOrder, options, startedAt, prev){
-    startOrderWatch(scope, initiatedOrder, options, startedAt, prev);
+function rejectScope(scope, initiatedOrder, options, startedAt, prev, x, y){
+    startOrderWatch(scope, initiatedOrder, options, startedAt, prev, x, y);
 }
 
-function orderWatch(scope, initiatedOrder, options, startedAt, prev){
+function orderWatch(scope, initiatedOrder, options, startedAt, prev, throttle){
     var now = new Date();
     scope.api.order.info({uuid: initiatedOrder.uuid})
         .then(function(order){
@@ -138,6 +138,7 @@ function orderWatch(scope, initiatedOrder, options, startedAt, prev){
                 options.onExpiry(order);
             }else{
                 if(parseInt(options.autoCancelAfterOpenInMinutes) > 0){
+                    console.log(startedAt);
                     if(now.getTime() - startedAt.getTime() > parseInt(options.autoCancelAfterOpenInMinutes) * 60 * 1000){
                         scope.api.order.cancel({uuid: order.uuid})
                             .then(function(r){
@@ -148,19 +149,29 @@ function orderWatch(scope, initiatedOrder, options, startedAt, prev){
                             });
                         return;
                     }else{
-                        options.onCheck(order, initiatedOrder);
+                        options.onCheck(order, initiatedOrder,
+                                       now.getTime() - startedAt.getTime());
                     }
                 }else{
                     options.onCheck(order, initiatedOrder);
                 }
-                startOrderWatch(scope, order, options, startedAt, initiatedOrder);
+                startOrderWatch(scope, order, options, startedAt, initiatedOrder, null, throttle);
             }
-        }).catch(_.partial(rejectScope, scope, initiatedOrder, options, startedAt, prev));
+        }).catch(_.partial(rejectScope, scope, initiatedOrder, options, startedAt, prev, null, throttle));
 }
 
-function startOrderWatch(scope, initiatedOrder, options, startedAt, prev){
-    var throttle = 15000; // check every 15 seconds;
-    setTimeout(_.partial(orderWatch, scope, initiatedOrder, options, startedAt, prev), throttle);
+function startOrderWatch(scope, initiatedOrder, options, startedAt, prev, preWait, throttle){
+    if(typeof(throttle) == "undefined"){
+        throttle = 15000; // check every 15 seconds;
+    }
+    if(typeof(preWait) != "undefined"
+       && preWait != null
+       && parseInt(preWait) > 0){
+        setTimeout(_.partial(startOrderWatch, scope, initiatedOrder, options, startedAt, prev, null, throttle),
+                   preWait);
+    }else{
+        setTimeout(_.partial(orderWatch, scope, initiatedOrder, options, startedAt, prev), throttle);
+    }
 }
 
 /*
@@ -341,6 +352,7 @@ function define(config){
                     },{});
                     scope.cache.addresses = addresses;
                     resolve({order: _.partial(placeOrder, scope),
+                             watch: _.partial(startOrderWatch, scope),
                              balance: _.partial(balance, scope),
                              transfer: _.partial(transfer, scope),
                              internalTransfer: _.partial(internalTransfer, scope),

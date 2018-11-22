@@ -1,6 +1,6 @@
 {
   "name": "@kokosapiens/sdk",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "library for managing multiple addresses on multiple currencies with one key. all transaction signing is done offline so no private key ever touches the internet while using the sdk.",
   "main": "index.js",
   "scripts": {
